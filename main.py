@@ -21,3 +21,6 @@ async def get_video_data_from_database():
 async def get_video_data_from_db_by_search(title:str | None = None ,description:str | None = None):
     return await functions.get_video_data_from_db_by_search(title,description)
 
+@app.get("/fetch")
+def check():
+    return functions.get_data_from_yt_api()
