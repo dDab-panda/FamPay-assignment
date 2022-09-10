@@ -1,4 +1,4 @@
-from pymongo import MongoClient
+import pymongo
 import os
 from dotenv import load_dotenv
 import requests
@@ -17,50 +17,81 @@ def get_data_from_api(api_url, parameters):
 
 
 def getDb():
-    client = MongoClient(os.getenv('MONGODB_URL'))
+    client = pymongo.MongoClient(os.getenv('MONGODB_URL'))
     db = client['famPay']
-    db_videodata = db['video_data']
-    return db_videodata
+    db= db['video_data7']
+    if len(db.index_information())<2:
+        db.create_index([ ("publishedAt", -1) ])
+    return db
+
+
+def getDataModel(dataModel):
+    result = {
+        'id':dataModel['id']['videoId'],
+        'publishedAt':dataModel['snippet']['publishedAt'],
+        'snippet':dataModel['snippet']
+        }
+    return result
+  
 
 def push_data_to_db(data):
 
-    db_videodata = getDb()
-    #print(data)
-    inserted = db_videodata.insert_many(data['items'])
-    print(str(len(inserted.inserted_ids))," - documents inserted in db")
+    db = getDb()
+    list_yt_data = list(data['items'])
+    count=0
+    for dataItem in list_yt_data:
+       dataModel = getDataModel(dataItem)
+       db_data = db.find({'id':{'$regex':dataModel['id']}})
+       list_db_data = list(db_data)
+       if len(list_db_data)==0:
+            db.insert_one(dataModel)
+            count+=1 
+       else:
+        continue
 
-count=0
+    print(count," - documents inserted in db")
+
+cron_count=0
+pageToken=None
 def get_data_from_yt_api():
 
-    global count
-    count+=1
-    print("Cron Job Run id:",count)
+    global cron_count
+    global pageToken
+    cron_count+=1
 
-    
-    params = {
-                "key":os.getenv('YOUTUBE_API_KEY'),
-                "part":"id,snippet",
-                "q":"Cricket",
-                "publishedAfter":"022-01-01T00:00:00Z",
-                "order":"date",
-                "type":"video"
-             }
-    response_data = get_data_from_api("https://www.googleapis.com/youtube/v3/search",params)
+    if cron_count==3:
+        sch.remove_job('cron_id')
+
+    print("Cron Job Run id:",cron_count)
+    params =    {
+                    "key":os.getenv('YOUTUBE_API_KEY'),
+                    "part":"id,snippet",
+                    "q":"coding",
+                    "publishedAfter":"2022-01-01T00:00:00Z",
+                    "order":"date",
+                    "type":"video",
+                    "maxResults":25
+                }
+    if pageToken is not None:
+        params['pageToken'] = pageToken
+    response_data = get_data_from_api("https://www.googleapis.com/youtube/v3/search",params)            
+    pageToken = response_data['nextPageToken']     
 
     push_data_to_db(response_data)
-    
+    return response_data
 
 
 def start_cron_job(interval):
     
     if interval is None:
         interval=10
-        
+    global sch
     sch = scheduler(daemon=True)
-    sch.add_job(get_data_from_yt_api,'interval', seconds=interval)
-    sch.start()    
+    
+    sch.add_job(get_data_from_yt_api,'interval', seconds=interval,id='cron_id')
+    sch.start()
 
-
+    
 async def get_data_from_db_with_pg(limit, page_id):
     
     db_videodata = getDb()
@@ -91,6 +122,13 @@ async def get_data_from_db():
 
 async def get_video_data_from_db_by_search(title,description):
     
+    if title is None and description is None:
+        return {"Error":"Please enter a title or description as Query Parameter"}
+
+    if title is None:
+        title=""
+    if description is None:
+        description=""    
     db = getDb()
     db_data = db.find({'$and':[{'snippet.title': {'$regex':title, '$options':'i'}},{'snippet.description': {'$regex':description, '$options':'i'}}]})
 
@@ -100,3 +138,5 @@ async def get_video_data_from_db_by_search(title,description):
     response_json = json.loads(dumps(list_db_data))
     
     return response_json
+
+
