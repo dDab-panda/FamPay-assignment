@@ -5,7 +5,7 @@ import requests
 load_dotenv()
 from apscheduler.schedulers.background import BackgroundScheduler as scheduler
 import json
-from bson.json_util import dumps,loads
+from bson.json_util import dumps
 
 def get_data_from_api(api_url, parameters):
     response = requests.get(f"{api_url}", params=parameters)
@@ -15,7 +15,7 @@ def get_data_from_api(api_url, parameters):
 def getDb():
     client = pymongo.MongoClient(os.getenv('MONGODB_URL'))
     db = client['famPay']
-    db= db['video_data11']
+    db= db['video_data']
     if len(db.index_information())<2:
         db.create_index([ ("publishedAt", -1) ])
     return db
@@ -67,7 +67,7 @@ def get_data_from_yt_api():
     params =    {
                     "key":yt_key_list[yt_key_index],
                     "part":"id,snippet",
-                    "q":"cricket",
+                    "q":"tea",
                     "publishedAfter":"2022-01-01T00:00:00Z",
                     "order":"date",
                     "type":"video",

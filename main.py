@@ -1,14 +1,23 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.wsgi import WSGIMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from flask import Flask,render_template
-import functions
-import requests
 
+import utility.functions as functions
 api = FastAPI()
-webapp=Flask(__name__)
 
 #Adding flask app on our FastAPI
+webapp=Flask(__name__)
 api.mount('/app',WSGIMiddleware(webapp))
+
+api.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @api.get("/api/v1/start")
 async def start_fetching_data_from_youtube(interval:int | None = None):
@@ -31,6 +40,10 @@ async def get_video_data_from_db_by_search(title:str | None = None ,description:
 @api.get("/api/v1/search/page/{page_id}")
 async def get_video_data_from_db_by_search_for_webapp(page_id:int,title:str | None = None):
     return await functions.get_video_data_from_db_by_search_with_pg(title,page_id)
+
+@api.get("/")
+async def re_route_to_webapp():
+    return RedirectResponse(url=f"/app/", status_code=303)
 
 @webapp.route('/')
 def index():
