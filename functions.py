@@ -8,20 +8,14 @@ import json
 from bson.json_util import dumps,loads
 
 def get_data_from_api(api_url, parameters):
-        response = requests.get(f"{api_url}", params=parameters)
-        return response
-        if response.status_code == 200:
-            print("sucessfully fetched the data from API")
-            return response.json()
-        else:
-            print(f"Hello person, there's a {response.status_code} error with your request")
-            return response.json()
+    response = requests.get(f"{api_url}", params=parameters)
+    return response
 
 
 def getDb():
     client = pymongo.MongoClient(os.getenv('MONGODB_URL'))
     db = client['famPay']
-    db= db['video_data8']
+    db= db['video_data11']
     if len(db.index_information())<2:
         db.create_index([ ("publishedAt", -1) ])
     return db
@@ -63,7 +57,7 @@ def get_data_from_yt_api():
     global yt_key_index
     cron_count+=1
 
-    if cron_count==2:
+    if cron_count==3:
         sch.remove_job('cron_id')
 
     yt_keys=os.getenv('YOUTUBE_API_KEY')
@@ -73,7 +67,7 @@ def get_data_from_yt_api():
     params =    {
                     "key":yt_key_list[yt_key_index],
                     "part":"id,snippet",
-                    "q":"coding",
+                    "q":"cricket",
                     "publishedAfter":"2022-01-01T00:00:00Z",
                     "order":"date",
                     "type":"video",
@@ -115,7 +109,7 @@ async def get_data_from_db_with_pg(limit, page_id):
     db = getDb()
 
     if limit is None:
-        limit = 10
+        limit = 9
     if page_id<1:
         page_id = 1
     skips=limit*(page_id-1)
@@ -157,4 +151,21 @@ async def get_video_data_from_db_by_search(title,description):
     
     return response_json
 
+async def get_video_data_from_db_by_search_with_pg(title,page_id):
+    
+    if title is None:
+        title=""
+    if page_id<1:
+        page_id = 1     
+    db = getDb()
+    skips=9*(page_id-1)
+
+    db_data = db.find({'snippet.title': {'$regex':title, '$options':'i'}}).skip(skips).limit(9)
+
+    page_details = {"Page Number" : page_id,"Page Limit" : 9}
+    list_db_data = list(db_data)
+    list_db_data.insert(0,page_details)
+    response_json = json.loads(dumps(list_db_data))
+    
+    return response_json
 
