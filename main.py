@@ -24,7 +24,6 @@ async def start_fetching_data_from_youtube(interval:int | None = None):
     functions.start_cron_job(interval)
     return {"message":"Cron job run successfully"}    
 
-
 @api.get("/api/v1/get")
 async def get_all_video_data_from_database():
     return await functions.get_data_from_db()
@@ -41,10 +40,12 @@ async def get_video_data_from_db_by_search(title:str | None = None ,description:
 async def get_video_data_from_db_by_search_for_webapp(page_id:int,title:str | None = None):
     return await functions.get_video_data_from_db_by_search_with_pg(title,page_id)
 
+#WebApp routing from "/" to "/app"
 @api.get("/")
 async def re_route_to_webapp():
     return RedirectResponse(url=f"/app/", status_code=303)
 
+#WebApp
 @webapp.route('/')
 def index():
     return render_template("index.html")
