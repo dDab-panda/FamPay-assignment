@@ -55,3 +55,7 @@ docker-compose up -d
 ```
 3. Navigate to `http://localhost:8000/app` to see the app live
 
+### Documentation
+
+OpenAPI Specification comes bundled with FastAPI.
+You can find the documentation at `http://localhost:8000/docs`
